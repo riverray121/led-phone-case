@@ -1,65 +1,60 @@
-// Wiring test for Case A: 1.44" ST7735 TFT (M029) on ESP32-C3 SuperMini.
-// Exercises every wire: SCK/MOSI/CS/DC via draws, RES via init, BL via PWM.
-// Pin map matches DESIGN.md.
+// LED phone case firmware v0, Case A (TFT). Runs a selectable animation on
+// the display; selection and brightness are controlled over BLE.
 
-#include <Adafruit_GFX.h>
-#include <Adafruit_ST7735.h>
-#include <SPI.h>
+#include <Arduino.h>
 
-constexpr int PIN_SCK = 4;
-constexpr int PIN_MOSI = 6;
-constexpr int PIN_CS = 7;
-constexpr int PIN_DC = 5;
-constexpr int PIN_RST = 10;
-constexpr int PIN_BL = 1;
+#include "animations.h"
+#include "ble_service.h"
+#include "case_display.h"
 
-Adafruit_ST7735 tft(PIN_CS, PIN_DC, PIN_RST);
+namespace {
+
+constexpr uint32_t FRAME_MS = 33;  // ~30 fps
+
+CaseDisplay display;
+Animation **anims;
+int animCount = 0;
+int currentAnim = 0;
+uint32_t animStart = 0;
+String namesCsv;
+
+}  // namespace
 
 void setup() {
     Serial.begin(115200);
-    delay(2000);  // give USB CDC time to enumerate before first prints
-    Serial.println("wiring-test: boot");
+    display.begin();
 
-    pinMode(PIN_BL, OUTPUT);
-    analogWrite(PIN_BL, 255);
+    anims = animationList(animCount);
+    for (int i = 0; i < animCount; i++) {
+        if (i) namesCsv += ',';
+        namesCsv += anims[i]->name();
+    }
 
-    SPI.begin(PIN_SCK, -1, PIN_MOSI, -1);
-    tft.initR(INITR_144GREENTAB);  // 1.44" 128x128 variant
-    tft.setSPISpeed(40000000);
-    Serial.println("wiring-test: display initialized");
-}
-
-void showLabel(const char *name, uint16_t fill, uint16_t textColor) {
-    uint32_t t0 = micros();
-    tft.fillScreen(fill);
-    uint32_t dt = micros() - t0;
-    Serial.printf("wiring-test: fillScreen took %lu us\n", (unsigned long)dt);
-    tft.setCursor(10, 56);
-    tft.setTextColor(textColor);
-    tft.setTextSize(2);
-    tft.print(name);
-    Serial.printf("wiring-test: %s\n", name);
-    delay(1200);
+    bleBegin(namesCsv.c_str(), animCount, currentAnim, display.brightness());
+    animStart = millis();
+    Serial.printf("firmware v0: %d animations: %s\n", animCount, namesCsv.c_str());
 }
 
 void loop() {
-    showLabel("RED", ST77XX_RED, ST77XX_WHITE);
-    showLabel("GREEN", ST77XX_GREEN, ST77XX_BLACK);
-    showLabel("BLUE", ST77XX_BLUE, ST77XX_WHITE);
-    showLabel("WHITE", ST77XX_WHITE, ST77XX_BLACK);
+    uint32_t frameBegin = millis();
 
-    // Backlight fade proves BL is on GPIO1 and PWM-controllable
-    tft.fillScreen(ST77XX_YELLOW);
-    tft.setCursor(10, 56);
-    tft.setTextColor(ST77XX_BLACK);
-    tft.print("BL FADE");
-    Serial.println("wiring-test: backlight fade");
-    for (int b = 255; b >= 0; b -= 5) {
-        analogWrite(PIN_BL, b);
-        delay(20);
+    if (bleState.pendingAnim >= 0) {
+        currentAnim = bleState.pendingAnim;
+        bleState.pendingAnim = -1;
+        animStart = frameBegin;
+        bleNotifyAnim(currentAnim);
+        Serial.printf("anim -> %s\n", anims[currentAnim]->name());
     }
-    for (int b = 0; b <= 255; b += 5) {
-        analogWrite(PIN_BL, b);
-        delay(20);
+    if (bleState.pendingBrightness >= 0) {
+        display.setBrightness(bleState.pendingBrightness);
+        bleState.pendingBrightness = -1;
     }
+
+    GFXcanvas16 &c = display.canvas();
+    c.fillScreen(0x0000);
+    anims[currentAnim]->frame(c, frameBegin - animStart);
+    display.present();
+
+    uint32_t spent = millis() - frameBegin;
+    if (spent < FRAME_MS) delay(FRAME_MS - spent);
 }

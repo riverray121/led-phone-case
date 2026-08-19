@@ -105,6 +105,22 @@ Both cases run the same firmware core and are controlled by the same app. Nothin
 - **Firmware**: animation engine renders into an abstract RGB framebuffer. A display driver maps the framebuffer to hardware: ST7735 over SPI (Case A) or WS2812 via FastLED (Case B). Adding a display type means adding one driver.
 - **App**: one CoreBluetooth transport, one protocol codec, UI renders animation previews from the reported resolution.
 
+### BLE protocol v0
+
+Device name `LED Case`. One service, UUID base `7A0Bxxxx-63B1-4A6F-8D3A-6E1C2A5B9D01`:
+
+| Char | UUID (xxxx) | Access | Payload |
+|---|---|---|---|
+| AnimList | 0002 | read | UTF-8, comma-separated animation names |
+| AnimSelect | 0003 | read/write/notify | uint8 index into AnimList |
+| Brightness | 0004 | read/write | uint8 0-255 |
+| DisplayInfo | 0005 | read | uint8[4]: type (1=TFT, 2=matrix), width, height, bits/px |
+
+### Repo layout
+
+- `firmware/` — PlatformIO project (ESP32-C3, Arduino framework). `src/case_display.*` is the display driver layer; `src/animations.*` the engine; `src/ble_service.*` the GATT server. `tools/wiring_test.py` is a MicroPython bring-up check for freshly soldered boards.
+- `app/LEDCase.swiftpm` — iOS companion app (Swift Playgrounds app package). Open in Xcode, run on an iPhone.
+
 ## Display paths long-term
 
 1. **Backlit TFT LCD** (Case A): full color, cheap, works today. 26 mm square. Needs a tinted shell to hide it when off.
