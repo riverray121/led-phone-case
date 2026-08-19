@@ -58,7 +58,7 @@ Two hardware variants are built in parallel:
 | RES | GPIO10 |
 | DC | GPIO5 |
 | CS | GPIO7 |
-| BL | 3V3 |
+| BL | GPIO1 (PWM brightness control; if BL drives the backlight LEDs directly at >20 mA, buffer with a transistor) |
 
 Avoid GPIO2, 8, 9 (strapping pins).
 
