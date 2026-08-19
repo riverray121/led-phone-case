@@ -25,11 +25,15 @@ void setup() {
 
     SPI.begin(PIN_SCK, -1, PIN_MOSI, -1);
     tft.initR(INITR_144GREENTAB);  // 1.44" 128x128 variant
+    tft.setSPISpeed(40000000);
     Serial.println("wiring-test: display initialized");
 }
 
 void showLabel(const char *name, uint16_t fill, uint16_t textColor) {
+    uint32_t t0 = micros();
     tft.fillScreen(fill);
+    uint32_t dt = micros() - t0;
+    Serial.printf("wiring-test: fillScreen took %lu us\n", (unsigned long)dt);
     tft.setCursor(10, 56);
     tft.setTextColor(textColor);
     tft.setTextSize(2);
