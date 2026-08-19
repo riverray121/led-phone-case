@@ -97,6 +97,14 @@ BLE, not the cable: iOS blocks USB accessory data without MFi. Swift + CoreBluet
 - Stream frames live from the app
 - Upload animations to ESP32 flash and play them standalone
 
+## Software architecture
+
+Both cases run the same firmware core and are controlled by the same app. Nothing outside the driver layer may know which display is attached.
+
+- **BLE protocol**: identical service and characteristic UUIDs on both cases. A readable display-info characteristic reports display type, width, height, and color depth. The app reads it after connecting and adapts.
+- **Firmware**: animation engine renders into an abstract RGB framebuffer. A display driver maps the framebuffer to hardware: ST7735 over SPI (Case A) or WS2812 via FastLED (Case B). Adding a display type means adding one driver.
+- **App**: one CoreBluetooth transport, one protocol codec, UI renders animation previews from the reported resolution.
+
 ## Display paths long-term
 
 1. **Backlit TFT LCD** (Case A): full color, cheap, works today. 26 mm square. Needs a tinted shell to hide it when off.
