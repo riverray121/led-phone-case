@@ -16,6 +16,7 @@ Two hardware variants are built in parallel:
 | ESP32-C3 SuperMini | Power in, BLE, drives display |
 | 1.44" TFT LCD 128×128 SPI (M029) | Full-color display |
 | Clear TPU case | iPhone 16 Pro |
+| 3D-printed carrier plate + cover | Holds display and SuperMini against the case back |
 
 ### Case B
 
@@ -28,6 +29,7 @@ Two hardware variants are built in parallel:
 | 330 Ω resistor | Series on data line |
 | 1N4148 diode | Fallback if the 74HCT04 fails |
 | Clear TPU case | iPhone 16 Pro |
+| 3D-printed carrier plate + cover | Holds matrix and SuperMini against the case back |
 
 ### Shared
 
@@ -60,7 +62,9 @@ Two hardware variants are built in parallel:
 | CS | GPIO7 |
 | BL | GPIO1 (PWM brightness control; if BL drives the backlight LEDs directly at >20 mA, buffer with a transistor) |
 
-Avoid GPIO2, 8, 9 (strapping pins).
+Avoid GPIO2, 8, 9 (strapping pins). GPIO0 carries no wire but is reserved: firmware parks the unused SPI MISO function on it.
+
+The panel mounts sideways in the case; firmware rotates the image 90° clockwise (`ROTATION` in `firmware/src/case_display.cpp`).
 
 ### Case B
 
@@ -92,7 +96,9 @@ Bench-test on a power bank first.
 
 ## App
 
-BLE, not the cable: iOS blocks USB accessory data without MFi. Swift + CoreBluetooth on the phone, GATT server on the ESP32. Two modes:
+BLE, not the cable: iOS blocks USB accessory data without MFi. Swift + CoreBluetooth on the phone, GATT server on the ESP32.
+
+Implemented (v0): select from the firmware's built-in animations, set brightness. Planned:
 
 - Stream frames live from the app
 - Upload animations to ESP32 flash and play them standalone
