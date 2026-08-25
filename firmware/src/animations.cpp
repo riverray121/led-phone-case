@@ -453,14 +453,230 @@ private:
     }
 };
 
+// ------------------------------------------------------------ low-res set
+// Drawn on an 8x8 logical grid of 16x16 blocks, sized for the LED matrix.
+// The matrix driver's block averaging reproduces them one LED per cell; on
+// the TFT they render as chunky pixel art.
+
+constexpr int CELL = W / 8;
+
+void px(GFXcanvas16 &c, int x, int y, uint16_t col) {
+    if (x < 0 || x > 7 || y < 0 || y > 7) return;
+    c.fillRect(x * CELL, y * CELL, CELL, CELL, col);
+}
+
+uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+}
+
+uint16_t hueColor(uint8_t h) {
+    uint8_t x = (h % 85) * 3;
+    if (h < 85) return rgb565(255 - x, x, 0);
+    if (h < 170) return rgb565(0, 255 - x, x);
+    return rgb565(x, 0, 255 - x);
+}
+
+class RainbowAnim : public Animation {
+public:
+    const char *name() const override { return "Rainbow"; }
+
+    void frame(GFXcanvas16 &c, uint32_t ms) override {
+        for (int y = 0; y < 8; y++)
+            for (int x = 0; x < 8; x++)
+                px(c, x, y, hueColor((uint8_t)((x + y) * 14 + ms / 14)));
+    }
+};
+
+class FireAnim : public Animation {
+public:
+    const char *name() const override { return "Fire"; }
+
+    void frame(GFXcanvas16 &c, uint32_t ms) override {
+        frameNo_++;
+        // classic fire: bottom row sparks, heat rises and cools
+        for (int x = 0; x < 8; x++)
+            heat_[7 * 8 + x] = 140 + (hash32(frameNo_ * 8 + x) % 116);
+        for (int y = 0; y < 7; y++) {
+            for (int x = 0; x < 8; x++) {
+                int xl = x > 0 ? x - 1 : 0, xr = x < 7 ? x + 1 : 7;
+                int below = y + 1;
+                int h = (heat_[below * 8 + x] * 2 + heat_[below * 8 + xl] +
+                         heat_[below * 8 + xr]) / 4;
+                int cool = 10 + (hash32(frameNo_ * 64 + y * 8 + x) % 22);
+                heat_[y * 8 + x] = h > cool ? h - cool : 0;
+            }
+        }
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                int t = heat_[y * 8 + x];
+                uint8_t r = t < 85 ? t * 3 : 255;
+                uint8_t g = t < 85 ? 0 : (t < 170 ? (t - 85) * 3 : 255);
+                uint8_t b = t < 170 ? 0 : (t - 170) * 3;
+                px(c, x, y, rgb565(r, g, b));
+            }
+        }
+    }
+
+private:
+    uint8_t heat_[64] = {0};
+    uint32_t frameNo_ = 0;
+};
+
+class RainAnim : public Animation {
+public:
+    const char *name() const override { return "Rain"; }
+
+    void frame(GFXcanvas16 &c, uint32_t ms) override {
+        for (int x = 0; x < 8; x++) {
+            uint32_t speed = 120 + (uint32_t)(frand(x * 3 + 7) * 160);  // ms per cell
+            uint32_t phase = (uint32_t)(frand(x * 5 + 2) * 4000);
+            int head = (int)(((ms + phase) / speed) % 14);  // 8 rows + off-screen gap
+            for (int t = 0; t < 4; t++) {
+                int y = head - t;
+                if (y < 0 || y > 7) continue;
+                if (t == 0) px(c, x, y, rgb565(170, 220, 255));
+                else px(c, x, y, rgb565(0, 40 / t, 200 / t));
+            }
+        }
+    }
+};
+
+class HeartAnim : public Animation {
+public:
+    const char *name() const override { return "Heart"; }
+
+    void frame(GFXcanvas16 &c, uint32_t ms) override {
+        static const uint8_t rows[8] = {0b01100110, 0b11111111, 0b11111111,
+                                        0b11111111, 0b01111110, 0b00111100,
+                                        0b00011000, 0b00000000};
+        // lub-dub: two quick pulses, then rest
+        float t = ms % 1100;
+        auto hump = [&](float center, float w) {
+            float d = fabsf(t - center);
+            return d < w ? 1.0f - d / w : 0.0f;
+        };
+        float amp = 0.30f + 0.70f * fmaxf(hump(150, 130), 0.75f * hump(430, 150));
+        uint8_t r = (uint8_t)(70 + 185 * amp);
+        uint16_t col = rgb565(r, 0, r / 5);
+        for (int y = 0; y < 8; y++)
+            for (int x = 0; x < 8; x++)
+                if (rows[y] & (0x80 >> x)) px(c, x, y, col);
+    }
+};
+
+class SnakeAnim : public Animation {
+public:
+    const char *name() const override { return "Snake"; }
+
+    void frame(GFXcanvas16 &c, uint32_t ms) override {
+        if (ms < lastMs_) inited_ = false;  // animation was reselected
+        lastMs_ = ms;
+        if (!inited_) reset(ms);
+
+        if (ms - lastStep_ >= 170) {
+            lastStep_ = ms;
+            step();
+        }
+
+        px(c, foodX_, foodY_, RED);
+        for (int i = len_ - 1; i >= 0; i--) {
+            uint8_t g = i == 0 ? 255 : (uint8_t)(190 - i * 6);
+            px(c, bodyX_[i], bodyY_[i], rgb565(0, g, i == 0 ? 60 : 0));
+        }
+    }
+
+private:
+    static constexpr int MAX_LEN = 20;
+    int8_t bodyX_[MAX_LEN], bodyY_[MAX_LEN];
+    int len_ = 0;
+    int8_t foodX_ = 5, foodY_ = 5;
+    uint32_t lastStep_ = 0, lastMs_ = 0, seed_ = 0;
+    bool inited_ = false;
+
+    void reset(uint32_t ms) {
+        inited_ = true;
+        len_ = 3;
+        for (int i = 0; i < 3; i++) { bodyX_[i] = 3 - i; bodyY_[i] = 4; }
+        lastStep_ = ms;
+        seed_ = hash32(ms);
+        placeFood();
+    }
+
+    bool onBody(int x, int y, int upto) const {
+        for (int i = 0; i < upto; i++)
+            if (bodyX_[i] == x && bodyY_[i] == y) return true;
+        return false;
+    }
+
+    void placeFood() {
+        do {
+            foodX_ = hash32(seed_++) % 8;
+            foodY_ = hash32(seed_++) % 8;
+        } while (onBody(foodX_, foodY_, len_));
+    }
+
+    void step() {
+        int hx = bodyX_[0], hy = bodyY_[0];
+        int dx = foodX_ - hx, dy = foodY_ - hy;
+        // candidate moves: toward food on the longer axis first
+        int cand[4][2];
+        int px1 = dx > 0 ? 1 : -1, py1 = dy > 0 ? 1 : -1;
+        if (abs(dx) >= abs(dy)) {
+            cand[0][0] = px1; cand[0][1] = 0;
+            cand[1][0] = 0;   cand[1][1] = py1;
+            cand[2][0] = 0;   cand[2][1] = -py1;
+            cand[3][0] = -px1; cand[3][1] = 0;
+        } else {
+            cand[0][0] = 0;   cand[0][1] = py1;
+            cand[1][0] = px1; cand[1][1] = 0;
+            cand[2][0] = -px1; cand[2][1] = 0;
+            cand[3][0] = 0;   cand[3][1] = -py1;
+        }
+        int nx = -1, ny = -1;
+        for (auto &m : cand) {
+            int tx = hx + m[0], ty = hy + m[1];
+            // tail cell is fine: it moves away this step
+            if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8 && !onBody(tx, ty, len_ - 1)) {
+                nx = tx; ny = ty;
+                break;
+            }
+        }
+        if (nx < 0) {  // trapped: start over
+            inited_ = false;
+            return;
+        }
+
+        bool ate = nx == foodX_ && ny == foodY_;
+        int newLen = ate ? len_ + 1 : len_;
+        if (newLen > MAX_LEN) {
+            inited_ = false;
+            return;
+        }
+        for (int i = newLen - 1; i > 0; i--) {
+            bodyX_[i] = bodyX_[i - 1];
+            bodyY_[i] = bodyY_[i - 1];
+        }
+        bodyX_[0] = nx;
+        bodyY_[0] = ny;
+        len_ = newLen;
+        if (ate) placeFood();
+    }
+};
+
 FaceAnim face;
 FishermanAnim fisherman;
 RunnerAnim runner;
 SisyphusAnim sisyphus;
 BalloonAnim balloon;
 StargazerAnim stargazer;
+RainbowAnim rainbow;
+FireAnim fire;
+RainAnim rain;
+HeartAnim heart;
+SnakeAnim snake;
 
-Animation *ANIMS[] = {&face, &fisherman, &runner, &sisyphus, &balloon, &stargazer};
+Animation *ANIMS[] = {&face,    &fisherman, &runner, &sisyphus, &balloon, &stargazer,
+                      &rainbow, &fire,      &rain,   &heart,    &snake};
 
 }  // namespace
 

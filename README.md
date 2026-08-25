@@ -17,7 +17,7 @@ Both run the same firmware core and the same app. The device reports its display
 
 ## Animations
 
-Six built-in, all drawn procedurally at runtime:
+Eleven built-in, all drawn procedurally at runtime. Six scene animations:
 
 1. **Face** — eyes that look around, blink, and change expression
 2. **Fisherman** — a rower poling his boat across moonlit water
@@ -25,6 +25,14 @@ Six built-in, all drawn procedurally at runtime:
 4. **Sisyphus** — pushes his boulder around the screen edge; it always rolls back
 5. **Balloon** — a kid chasing a balloon he never catches
 6. **Stargazer** — two figures on a hill under a twinkling sky with shooting stars
+
+Five low-res animations designed on an 8×8 grid, native to the LED matrix (chunky pixel art on the TFT):
+
+7. **Rainbow** — a color wave sweeping the grid
+8. **Fire** — rising-flame heat simulation
+9. **Rain** — drops falling at different speeds with fading trails
+10. **Heart** — pixel heart with a lub-dub pulse
+11. **Snake** — the game, playing itself
 
 ## App
 
