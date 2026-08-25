@@ -46,11 +46,12 @@ Case B swaps the TFT for an 8×8 WS2812 matrix plus a 74HCT04 level shifter, 330
 
 ## Build
 
-Firmware (PlatformIO):
+Firmware (PlatformIO), one environment per case:
 
 ```
 cd firmware
-pio run -t upload
+pio run -e case-a-tft -t upload
+pio run -e case-b-matrix -t upload
 ```
 
 App: open `app/LEDCase.swiftpm` in Xcode and run it on an iPhone.

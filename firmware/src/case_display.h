@@ -15,8 +15,10 @@ public:
     void present();
     void setBrightness(uint8_t level);
     uint8_t brightness() const { return brightness_; }
+    // BLE DisplayInfo payload: type (1=TFT, 2=matrix), width, height, bits/px
+    void info(uint8_t out[4]) const;
 
 private:
     GFXcanvas16 canvas_{WIDTH, HEIGHT};
-    uint8_t brightness_ = 255;
+    uint8_t brightness_;
 };

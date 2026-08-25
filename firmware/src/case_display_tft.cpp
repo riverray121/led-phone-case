@@ -1,3 +1,5 @@
+#ifdef CASE_DISPLAY_TFT
+
 #include "case_display.h"
 
 #include <Adafruit_ST7735.h>
@@ -20,6 +22,7 @@ Adafruit_ST7735 tft(PIN_CS, PIN_DC, PIN_RST);
 }  // namespace
 
 bool CaseDisplay::begin() {
+    brightness_ = 255;
     pinMode(PIN_BL, OUTPUT);
     analogWrite(PIN_BL, brightness_);
 
@@ -39,3 +42,12 @@ void CaseDisplay::setBrightness(uint8_t level) {
     brightness_ = level;
     analogWrite(PIN_BL, level);
 }
+
+void CaseDisplay::info(uint8_t out[4]) const {
+    out[0] = 1;
+    out[1] = WIDTH;
+    out[2] = HEIGHT;
+    out[3] = 16;
+}
+
+#endif  // CASE_DISPLAY_TFT

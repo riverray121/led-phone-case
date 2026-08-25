@@ -18,5 +18,5 @@ struct BleState {
 extern BleState bleState;
 
 void bleBegin(const char *animNamesCsv, int animCount, uint8_t initialAnim,
-              uint8_t initialBrightness);
+              uint8_t initialBrightness, const uint8_t displayInfo[4]);
 void bleNotifyAnim(uint8_t index);
