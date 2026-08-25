@@ -26,7 +26,7 @@ Twelve built-in, all drawn procedurally at runtime. Six scene animations:
 5. **Balloon** — a kid chasing a balloon he never catches
 6. **Stargazer** — two figures on a hill under a twinkling sky with shooting stars
 
-Five low-res animations designed on an 8×8 grid, native to the LED matrix (chunky pixel art on the TFT):
+Six low-res animations designed on an 8×8 grid, native to the LED matrix (chunky pixel art on the TFT):
 
 7. **Rainbow** — a color wave sweeping the grid
 8. **Fire** — rising-flame heat simulation
