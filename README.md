@@ -17,7 +17,7 @@ Both run the same firmware core and the same app. The device reports its display
 
 ## Animations
 
-Eleven built-in, all drawn procedurally at runtime. Six scene animations:
+Twelve built-in, all drawn procedurally at runtime. Six scene animations:
 
 1. **Face** — eyes that look around, blink, and change expression
 2. **Fisherman** — a rower poling his boat across moonlit water
@@ -33,6 +33,7 @@ Five low-res animations designed on an 8×8 grid, native to the LED matrix (chun
 9. **Rain** — drops falling at different speeds with fading trails
 10. **Heart** — pixel heart with a lub-dub pulse
 11. **Snake** — the game, playing itself
+12. **Smiley** — big pixel face cycling expressions: smiles, winks, surprise
 
 ## App
 

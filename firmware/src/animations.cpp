@@ -663,6 +663,58 @@ private:
     }
 };
 
+class SmileyAnim : public Animation {
+public:
+    const char *name() const override { return "Smiley"; }
+
+    void frame(GFXcanvas16 &c, uint32_t ms) override {
+        uint32_t seg = ms / 2200;
+        float roll = frand(seg * 9 + 3);
+        // 0 neutral (eyes wander), 1 smile, 2 surprised, 3 wink, 4 sad
+        int expr = roll < 0.35f ? 0 : roll < 0.65f ? 1 : roll < 0.80f ? 2
+                   : roll < 0.90f ? 3 : 4;
+
+        uint16_t eye = rgb565(80, 200, 255);
+        uint16_t mouth = rgb565(255, 190, 40);
+
+        int look = expr == 0 ? (int)(frand(seg * 11 + 6) * 3) - 1 : 0;
+        bool blink = (ms % 3400) < 150 && expr != 3;
+
+        // eyes: 2x2 blocks, one row higher when surprised, a line when closed
+        int eyeTop = expr == 2 ? 0 : 1;
+        for (int ex : {1, 5}) {
+            bool closed = blink || (expr == 3 && ex == 1);
+            if (closed) {
+                px(c, ex + look, 2, eye);
+                px(c, ex + 1 + look, 2, eye);
+            } else {
+                for (int y = eyeTop; y <= 2; y++) {
+                    px(c, ex + look, y, eye);
+                    px(c, ex + 1 + look, y, eye);
+                }
+            }
+        }
+
+        switch (expr) {
+            case 2:  // surprised: open mouth
+                px(c, 3, 4, mouth); px(c, 4, 4, mouth);
+                px(c, 3, 5, mouth); px(c, 4, 5, mouth);
+                break;
+            case 4:  // sad: corners down
+                for (int x = 2; x <= 5; x++) px(c, x, 4, mouth);
+                px(c, 1, 5, mouth); px(c, 6, 5, mouth);
+                break;
+            case 0:  // neutral: straight line
+                for (int x = 2; x <= 5; x++) px(c, x, 5, mouth);
+                break;
+            default:  // smile (also under the wink)
+                px(c, 1, 4, mouth); px(c, 6, 4, mouth);
+                for (int x = 2; x <= 5; x++) px(c, x, 5, mouth);
+                break;
+        }
+    }
+};
+
 FaceAnim face;
 FishermanAnim fisherman;
 RunnerAnim runner;
@@ -674,9 +726,10 @@ FireAnim fire;
 RainAnim rain;
 HeartAnim heart;
 SnakeAnim snake;
+SmileyAnim smiley;
 
 Animation *ANIMS[] = {&face,    &fisherman, &runner, &sisyphus, &balloon, &stargazer,
-                      &rainbow, &fire,      &rain,   &heart,    &snake};
+                      &rainbow, &fire,      &rain,   &heart,    &snake,   &smiley};
 
 }  // namespace
 
