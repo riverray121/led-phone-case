@@ -64,3 +64,17 @@ pio run -e case-b-matrix -t upload
 ```
 
 App: open `app/LEDCase.swiftpm` in Xcode and run it on an iPhone.
+
+## Browser emulator
+
+Preview Case A **128×128** scene animations in a web browser without hardware.
+The emulator compiles `firmware/src/animations.cpp` (plus local extras in
+`emulator/firmware/`) to WebAssembly. See [emulator/README.md](emulator/README.md).
+
+```bash
+cd emulator
+./scripts/build-wasm.sh
+python3 -m http.server 8080
+```
+
+Open http://localhost:8080

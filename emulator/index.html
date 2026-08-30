@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ESP32 128 screen emulator</title>
+    <link rel="stylesheet" href="css/emulator.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="kicker">128×128 RGB565</p>
+        <h1>128×128 screen emulator</h1>
+      </header>
+
+      <div class="stage">
+        <section class="device">
+          <div class="module" id="bezel">
+            <div class="module-top">
+              <span id="meta">Face</span>
+            </div>
+            <div class="glass">
+              <canvas id="screen" width="128" height="128"></canvas>
+            </div>
+            <div class="module-bot"><span id="fps">~30 fps</span></div>
+          </div>
+        </section>
+
+        <aside>
+          <nav id="anims" aria-label="Animations"></nav>
+
+          <label class="slider">
+            <span>Brightness <em id="bright-val">255</em></span>
+            <input id="brightness" type="range" min="0" max="255" value="255" />
+          </label>
+          <label class="slider">
+            <span>Speed <em id="speed-val">1×</em></span>
+            <input id="speed" type="range" min="0.25" max="8" value="1" step="0.25" />
+          </label>
+
+          <div class="row">
+            <button type="button" id="pause">Pause</button>
+            <p class="hint">↑↓ or j/k switch · space pauses · 1–9 pick anim · [ ] speed</p>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
