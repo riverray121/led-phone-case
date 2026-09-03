@@ -35,14 +35,31 @@ struct ContentView: View {
                         }
                     }
 
-                    Section("Brightness") {
-                        Slider(value: $ble.brightness, in: 5...255) { editing in
-                            if !editing { ble.applyBrightness() }
-                        }
-                    }
+                    sliderSection("Brightness", value: $ble.brightness, in: 5...255,
+                                  apply: ble.applyBrightness)
+                    sliderSection(speedTitle, value: $ble.speed, in: 4...128,
+                                  apply: ble.applySpeed)
                 }
             }
             .navigationTitle("LED Case")
+        }
+    }
+
+    private var speedTitle: String {
+        let mult = ble.speed / BLEManager.speedOne
+        let text = mult == mult.rounded()
+            ? String(format: "%.0f", mult)
+            : String(format: "%.2f", mult)
+        return "Speed (\(text)×)"
+    }
+
+    private func sliderSection(_ title: String, value: Binding<Double>,
+                               in range: ClosedRange<Double>,
+                               apply: @escaping () -> Void) -> some View {
+        Section(title) {
+            Slider(value: value, in: range) { editing in
+                if !editing { apply() }
+            }
         }
     }
 

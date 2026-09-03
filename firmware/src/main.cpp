@@ -15,7 +15,9 @@ CaseDisplay display;
 Animation **anims;
 int animCount = 0;
 int currentAnim = 0;
-uint32_t animStart = 0;
+uint8_t speed = SPEED_ONE;
+uint32_t animMs = 0;  // animation clock, advanced by real time scaled by speed
+uint32_t lastLoop = 0;
 String namesCsv;
 
 }  // namespace
@@ -36,18 +38,21 @@ void setup() {
     uint8_t displayInfo[5];
     display.info(displayInfo);
     displayInfo[4] = (uint8_t)sceneCount;
-    bleBegin(namesCsv.c_str(), animCount, currentAnim, display.brightness(), displayInfo);
-    animStart = millis();
+    bleBegin(namesCsv.c_str(), animCount, currentAnim, display.brightness(), speed,
+             displayInfo);
+    lastLoop = millis();
     Serial.printf("firmware v0: %d animations: %s\n", animCount, namesCsv.c_str());
 }
 
 void loop() {
     uint32_t frameBegin = millis();
+    animMs += (frameBegin - lastLoop) * speed / SPEED_ONE;
+    lastLoop = frameBegin;
 
     if (bleState.pendingAnim >= 0) {
         currentAnim = bleState.pendingAnim;
         bleState.pendingAnim = -1;
-        animStart = frameBegin;
+        animMs = 0;
         bleNotifyAnim(currentAnim);
         Serial.printf("anim -> %s\n", anims[currentAnim]->name());
     }
@@ -55,10 +60,14 @@ void loop() {
         display.setBrightness(bleState.pendingBrightness);
         bleState.pendingBrightness = -1;
     }
+    if (bleState.pendingSpeed >= 0) {
+        speed = bleState.pendingSpeed;
+        bleState.pendingSpeed = -1;
+    }
 
     GFXcanvas16 &c = display.canvas();
     c.fillScreen(0x0000);
-    anims[currentAnim]->frame(c, frameBegin - animStart);
+    anims[currentAnim]->frame(c, animMs);
     display.present();
 
     uint32_t spent = millis() - frameBegin;

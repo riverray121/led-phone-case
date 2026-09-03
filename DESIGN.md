@@ -98,7 +98,7 @@ Bench-test on a power bank first.
 
 BLE, not the cable: iOS blocks USB accessory data without MFi. Swift + CoreBluetooth on the phone, GATT server on the ESP32.
 
-Implemented (v0): select from the firmware's built-in animations, set brightness. Planned:
+Implemented (v0): select from the firmware's built-in animations, set brightness and playback speed. Planned:
 
 - Stream frames live from the app
 - Upload animations to ESP32 flash and play them standalone
@@ -121,6 +121,7 @@ Device name `LED Case`. One service, UUID base `7A0Bxxxx-63B1-4A6F-8D3A-6E1C2A5B
 | AnimSelect | 0003 | read/write/notify | uint8 index into AnimList |
 | Brightness | 0004 | read/write | uint8 0-255 |
 | DisplayInfo | 0005 | read | uint8[5]: type (1=TFT, 2=matrix), width, height, bits/px, scene count (leading AnimList entries that are 128×128 scenes; the rest are 8×8 low-res) |
+| Speed | 0006 | read/write | uint8 playback speed in 1/16ths (16 = 1×) |
 
 ### Repo layout
 

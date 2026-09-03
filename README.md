@@ -40,7 +40,7 @@ Six low-res animations designed on an 8×8 grid, native to the LED matrix (chunk
 
 ## App
 
-SwiftUI + CoreBluetooth. Connects automatically, lists the animations the case reports, sets brightness.
+SwiftUI + CoreBluetooth. Connects automatically, lists the animations the case reports grouped by resolution, sets brightness and playback speed.
 
 <img src="docs/images/app-screenshot.png" width="300" alt="Companion app">
 
