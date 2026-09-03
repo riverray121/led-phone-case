@@ -1,3 +1,6 @@
+// Derived from the Adafruit GFX Library, Copyright (c) 2012 Adafruit
+// Industries, BSD license. The full notice is in Adafruit_GFX.h.
+
 #include "Adafruit_GFX.h"
 
 #include <stdlib.h>

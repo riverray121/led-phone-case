@@ -1,3 +1,6 @@
+// From the Adafruit GFX Library, Copyright (c) 2012 Adafruit Industries, BSD
+// license. The full notice is in Adafruit_GFX.h.
+//
 // This is the 'classic' fixed-space bitmap font for Adafruit_GFX since 1.0.
 // See gfxfont.h for newer custom bitmap font info.
 
