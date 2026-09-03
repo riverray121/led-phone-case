@@ -2,185 +2,9 @@
 
 #include <math.h>
 
+#include "animation_shared.h"
+
 namespace {
-
-constexpr int W = 128;
-constexpr int H = 128;
-constexpr float PI_F = 3.14159265f;
-
-constexpr uint16_t BLACK = 0x0000;
-constexpr uint16_t WHITE = 0xFFFF;
-constexpr uint16_t GRAY = 0x8410;
-constexpr uint16_t DIMGRAY = 0x39E7;
-constexpr uint16_t RED = 0xF800;
-constexpr uint16_t YELLOW = 0xFFE0;
-constexpr uint16_t MOON = 0xFFF2;
-constexpr uint16_t WATER = 0x0119;
-constexpr uint16_t WAVE = 0x1C9F;
-constexpr uint16_t WOOD = 0xA285;
-constexpr uint16_t HILL = 0x01E2;
-constexpr uint16_t SKY_STAR = 0x7BEF;
-
-uint32_t hash32(uint32_t x) {
-    x ^= x >> 16;
-    x *= 0x7feb352d;
-    x ^= x >> 15;
-    x *= 0x846ca68b;
-    x ^= x >> 16;
-    return x;
-}
-
-float frand(uint32_t seed) { return (hash32(seed) & 0xFFFF) / 65535.0f; }
-
-// -------------------------------------------------------------- local frame
-// Figures are drawn in a local frame: a = forward along travel, h = up away
-// from the ground, so the same body code works on any edge or slope.
-
-struct Frame2D {
-    float ox, oy, dx, dy, ux, uy;
-
-    int X(float a, float h) const { return (int)lroundf(ox + dx * a + ux * h); }
-    int Y(float a, float h) const { return (int)lroundf(oy + dy * a + uy * h); }
-
-    static Frame2D upright(float x, float y) {
-        return {x, y, 1, 0, 0, -1};
-    }
-
-    void flip() { dx = -dx; dy = -dy; }
-};
-
-// ------------------------------------------------------- edge path (rounded)
-// Perimeter path hugging the screen edge, with quarter-circle corners so a
-// walker's orientation turns smoothly instead of snapping 90 degrees.
-
-struct EdgePath {
-    static constexpr float MARGIN = 2;
-    static constexpr float R = 16;
-    static constexpr float SL = W - 2 * MARGIN - 2 * R;  // straight side length
-    static constexpr float AL = R * PI_F / 2;            // corner arc length
-
-    static float total() { return 4 * (SL + AL); }
-
-    static Frame2D at(float s) {
-        float per = total();
-        s = fmodf(s, per);
-        if (s < 0) s += per;
-        int q = (int)(s / (SL + AL));
-        float u = s - q * (SL + AL);
-
-        static const float sx[4] = {MARGIN + R, W - MARGIN, W - MARGIN - R, MARGIN};
-        static const float sy[4] = {H - MARGIN, H - MARGIN - R, MARGIN, MARGIN + R};
-        static const float sdx[4] = {1, 0, -1, 0};
-        static const float sdy[4] = {0, -1, 0, 1};
-        static const float cx[4] = {W - MARGIN - R, W - MARGIN - R, MARGIN + R, MARGIN + R};
-        static const float cy[4] = {H - MARGIN - R, MARGIN + R, MARGIN + R, H - MARGIN - R};
-
-        Frame2D f;
-        if (u <= SL) {
-            f.ox = sx[q] + sdx[q] * u;
-            f.oy = sy[q] + sdy[q] * u;
-            f.dx = sdx[q];
-            f.dy = sdy[q];
-        } else {
-            float th = (PI_F / 2) * (1 - q) - (u - SL) / R;
-            f.ox = cx[q] + R * cosf(th);
-            f.oy = cy[q] + R * sinf(th);
-            f.dx = sinf(th);
-            f.dy = -cosf(th);
-        }
-        f.ux = f.dy;
-        f.uy = -f.dx;
-        return f;
-    }
-};
-
-// ------------------------------------------------------ articulated figure
-// Two-segment limbs: thighs and shins with a knee, upper arms and forearms
-// with an elbow. Roughly 23 px tall.
-
-enum class Pose { Run, Stand, Look, ArmsUp, Jump, Slump, Push };
-
-void drawHuman(GFXcanvas16 &c, const Frame2D &f, Pose pose, float phase,
-               uint32_t ms, uint16_t col) {
-    float lean = 0, shoulderH = 16, headA = 0, headH = 20;
-    switch (pose) {
-        case Pose::Run:    lean = 1.6f; headA = 2.0f; break;
-        case Pose::ArmsUp: lean = 1.0f; headA = 1.3f; break;
-        case Pose::Jump:   lean = 1.0f; headA = 1.3f; break;
-        case Pose::Push:   lean = 4.5f; shoulderH = 14; headA = 7.0f; headH = 17; break;
-        case Pose::Slump:  lean = 1.5f; shoulderH = 14; headA = 3.5f; headH = 15.5f; break;
-        default:           break;
-    }
-    if (pose == Pose::Look) headA = sinf(ms * 0.004f) * 2.8f;
-
-    // legs
-    auto leg = [&](float thigh, float bend) {
-        float ka = sinf(thigh) * 5.5f, kh = 9 - cosf(thigh) * 5.5f;
-        float shin = thigh - bend;
-        float fa = ka + sinf(shin) * 5.0f, fh = kh - cosf(shin) * 5.0f;
-        if (fh < -0.5f) fh = -0.5f;
-        c.drawLine(f.X(0, 9), f.Y(0, 9), f.X(ka, kh), f.Y(ka, kh), col);
-        c.drawLine(f.X(ka, kh), f.Y(ka, kh), f.X(fa, fh), f.Y(fa, fh), col);
-    };
-    switch (pose) {
-        case Pose::Run:
-        case Pose::ArmsUp:
-        case Pose::Push:
-            for (int k = 0; k < 2; k++) {
-                float ph = phase + k * PI_F;
-                float amp = pose == Pose::Push ? 0.55f : 0.9f;
-                leg(sinf(ph) * amp, fmaxf(0.f, sinf(ph + 0.8f)) * (pose == Pose::Push ? 0.7f : 1.2f));
-            }
-            break;
-        case Pose::Jump:
-            leg(1.15f, 2.1f);
-            leg(0.9f, 1.9f);
-            break;
-        default:  // Stand, Look, Slump
-            leg(0.18f, 0.15f);
-            leg(-0.18f, 0.05f);
-            break;
-    }
-
-    // torso and head
-    c.drawLine(f.X(0, 9), f.Y(0, 9), f.X(lean, shoulderH), f.Y(lean, shoulderH), col);
-    c.fillCircle(f.X(headA, headH), f.Y(headA, headH), 3, col);
-
-    // arms
-    auto arm = [&](float upper, float fore) {
-        float ea = lean + sinf(upper) * 4.5f, eh = shoulderH - cosf(upper) * 4.5f;
-        float ha = ea + sinf(fore) * 4.0f, hh = eh - cosf(fore) * 4.0f;
-        c.drawLine(f.X(lean, shoulderH), f.Y(lean, shoulderH), f.X(ea, eh), f.Y(ea, eh), col);
-        c.drawLine(f.X(ea, eh), f.Y(ea, eh), f.X(ha, hh), f.Y(ha, hh), col);
-    };
-    switch (pose) {
-        case Pose::Run:
-            for (int k = 0; k < 2; k++) {
-                float ua = sinf(phase + PI_F + k * PI_F) * 0.75f;
-                arm(ua, ua + 1.2f);
-            }
-            break;
-        case Pose::ArmsUp:
-        case Pose::Jump:
-            for (int k = 0; k < 2; k++) {
-                float ua = 2.35f + k * 0.3f + sinf(ms * 0.01f + k * 2) * 0.15f;
-                arm(ua, ua + 0.35f);
-            }
-            break;
-        case Pose::Push:
-            arm(1.35f, 1.05f);
-            arm(1.75f, 1.45f);
-            break;
-        case Pose::Slump:
-            arm(0.25f, 0.15f);
-            arm(-0.15f, -0.05f);
-            break;
-        default:  // Stand, Look
-            arm(0.15f, 0.1f);
-            arm(-0.15f, -0.1f);
-            break;
-    }
-}
 
 // ---------------------------------------------------------------- Face
 
@@ -200,20 +24,20 @@ public:
 
         for (int ex : {40, 88}) {
             if (blink) {
-                c.fillRect(ex - 20, 48, 41, 4, WHITE);
+                c.fillRect(ex - 20, 48, 41, 4, COL_WHITE);
             } else {
-                c.fillCircle(ex, 50, 20, WHITE);
-                c.fillCircle(ex + (int)(px * 9), 50 + (int)(py * 8), 8, BLACK);
+                c.fillCircle(ex, 50, 20, COL_WHITE);
+                c.fillCircle(ex + (int)(px * 9), 50 + (int)(py * 8), 8, COL_BLACK);
             }
         }
 
         if (seg % 6 == 4) {
-            c.fillCircle(64, 100, 9, WHITE);
-            c.fillCircle(64, 100, 5, BLACK);
+            c.fillCircle(64, 100, 9, COL_WHITE);
+            c.fillCircle(64, 100, 5, COL_BLACK);
         } else {
             for (int x = -22; x <= 22; x += 2) {
                 int y = 96 + (int)(10 - (x * x) / 48.0f);
-                c.fillRect(64 + x, y, 3, 3, WHITE);
+                c.fillRect(64 + x, y, 3, 3, COL_WHITE);
             }
         }
     }
@@ -230,21 +54,21 @@ public:
     const char *name() const override { return "Fisherman"; }
 
     void frame(GFXcanvas16 &c, uint32_t ms) override {
-        c.fillCircle(100, 22, 10, MOON);
-        c.fillCircle(105, 19, 9, BLACK);
+        c.fillCircle(100, 22, 10, COL_MOON);
+        c.fillCircle(105, 19, 9, COL_BLACK);
         for (int i = 0; i < 9; i++) {
             int sx = (int)(frand(i * 7 + 1) * 120) + 4;
             int sy = (int)(frand(i * 7 + 2) * 60) + 4;
-            uint16_t col = (ms / 400 + i) % 4 ? SKY_STAR : WHITE;
+            uint16_t col = (ms / 400 + i) % 4 ? COL_SKY_STAR : COL_WHITE;
             c.drawPixel(sx, sy, col);
         }
 
-        c.fillRect(0, 86, W, H - 86, WATER);
+        c.fillRect(0, 86, ANIM_W, ANIM_H - 86, COL_WATER);
         for (int row = 0; row < 4; row++) {
             int baseY = 90 + row * 9;
-            for (int x = 0; x < W; x += 3) {
+            for (int x = 0; x < ANIM_W; x += 3) {
                 float ph = ms * 0.002f + x * 0.12f + row * 1.7f;
-                c.drawPixel(x, baseY + (int)(sinf(ph) * 2), WAVE);
+                c.drawPixel(x, baseY + (int)(sinf(ph) * 2), COL_WAVE);
             }
         }
 
@@ -252,23 +76,23 @@ public:
         int bob = (int)(sinf(ms * 0.003f) * 1.5f);
         int yb = 84 + bob;
 
-        c.fillTriangle(xb, yb, xb + 8, yb + 6, xb + 44, yb, WOOD);
-        c.fillTriangle(xb + 8, yb + 6, xb + 36, yb + 6, xb + 44, yb, WOOD);
+        c.fillTriangle(xb, yb, xb + 8, yb + 6, xb + 44, yb, COL_WOOD);
+        c.fillTriangle(xb + 8, yb + 6, xb + 36, yb + 6, xb + 44, yb, COL_WOOD);
 
         int xf = xb + 36;
         int fy = yb;
-        c.drawLine(xf - 2, fy, xf, fy - 7, WHITE);
-        c.drawLine(xf + 2, fy, xf, fy - 7, WHITE);
-        c.drawLine(xf, fy - 7, xf - 1, fy - 16, WHITE);
-        c.fillCircle(xf - 1, fy - 19, 2, WHITE);
-        c.fillTriangle(xf - 6, fy - 21, xf + 4, fy - 21, xf - 1, fy - 25, YELLOW);
+        c.drawLine(xf - 2, fy, xf, fy - 7, COL_WHITE);
+        c.drawLine(xf + 2, fy, xf, fy - 7, COL_WHITE);
+        c.drawLine(xf, fy - 7, xf - 1, fy - 16, COL_WHITE);
+        c.fillCircle(xf - 1, fy - 19, 2, COL_WHITE);
+        c.fillTriangle(xf - 6, fy - 21, xf + 4, fy - 21, xf - 1, fy - 25, COL_YELLOW);
 
         float stroke = sinf(ms * 0.004f) * 0.5f + 0.25f;
         int hx = xf - 3, hy = fy - 13;
         int px2 = hx - (int)(sinf(stroke) * 26);
         int py2 = hy + (int)(cosf(stroke) * 26);
-        c.drawLine(hx, hy - 3, px2, py2, WOOD);
-        c.drawLine(xf + 1, fy - 12, hx, hy - 3, WHITE);
+        c.drawLine(hx, hy - 3, px2, py2, COL_WOOD);
+        c.drawLine(xf + 1, fy - 12, hx, hy - 3, COL_WHITE);
     }
 };
 
@@ -302,11 +126,11 @@ public:
 
         Frame2D f = EdgePath::at(dist);
         if (running) {
-            drawHuman(c, f, Pose::Run, dist * 0.55f, ms, WHITE);
+            drawHuman(c, f, Pose::Run, dist * 0.55f, ms, COL_WHITE);
         } else {
-            drawHuman(c, f, Pose::Look, 0, ms, WHITE);
+            drawHuman(c, f, Pose::Look, 0, ms, COL_WHITE);
             if ((lookMs / 400) % 2) {
-                c.setTextColor(YELLOW);
+                c.setTextColor(COL_YELLOW);
                 c.setCursor(f.X(0, 29) - 2, f.Y(0, 29) - 3);
                 c.print('?');
             }
@@ -352,24 +176,24 @@ public:
         Frame2D fb = EdgePath::at(base + ub);
         int bx = fb.X(0, BR), by = fb.Y(0, BR);
         float rot = (base + ub) / BR;
-        c.fillCircle(bx, by, (int)BR, GRAY);
+        c.fillCircle(bx, by, (int)BR, COL_GRAY);
         for (int k = 0; k < 3; k++) {
             float a = rot + k * 2.094f;
             c.drawLine(bx, by, bx + (int)(cosf(a) * (BR - 3)),
-                       by + (int)(sinf(a) * (BR - 3)), DIMGRAY);
+                       by + (int)(sinf(a) * (BR - 3)), COL_DIMGRAY);
         }
 
         Frame2D ff = EdgePath::at(base + uf - GAP);
         switch (state) {
             case PUSHING:
-                drawHuman(c, ff, Pose::Push, (base + uf) * 0.5f, ms, WHITE);
+                drawHuman(c, ff, Pose::Push, (base + uf) * 0.5f, ms, COL_WHITE);
                 break;
             case WATCHING:
-                drawHuman(c, ff, Pose::Slump, 0, ms, WHITE);
+                drawHuman(c, ff, Pose::Slump, 0, ms, COL_WHITE);
                 break;
             case RETURNING:
                 ff.flip();  // he walks facing the way he trudges
-                drawHuman(c, ff, Pose::Run, (base + uf) * 0.4f, ms, WHITE);
+                drawHuman(c, ff, Pose::Run, (base + uf) * 0.4f, ms, COL_WHITE);
                 break;
         }
     }
@@ -385,24 +209,24 @@ public:
         int bx = -20 + (int)((ms / 45) % 190);
         int by = 36 + (int)(sinf(ms * 0.002f) * 9);
 
-        c.fillCircle(bx, by, 9, RED);
-        c.fillTriangle(bx - 3, by + 9, bx + 3, by + 9, bx, by + 12, RED);
+        c.fillCircle(bx, by, 9, COL_RED);
+        c.fillTriangle(bx - 3, by + 9, bx + 3, by + 9, bx, by + 12, COL_RED);
         for (int i = 0; i < 16; i++) {
             c.drawPixel(bx + (int)(sinf(ms * 0.004f + i * 0.6f) * 2),
-                        by + 12 + i, WHITE);
+                        by + 12 + i, COL_WHITE);
         }
 
-        c.drawLine(0, 105, W, 105, DIMGRAY);
+        c.drawLine(0, 105, ANIM_W, 105, COL_DIMGRAY);
 
         // the kid sprints after it and leaps mid-screen, never catching it
         float feetY = 104;
         Pose pose = Pose::ArmsUp;
         if (bx > 55 && bx < 90) {
-            feetY -= sinf((bx - 55) * PI_F / 35.0f) * 13;
+            feetY -= sinf((bx - 55) * ANIM_PI / 35.0f) * 13;
             pose = Pose::Jump;
         }
         Frame2D f = Frame2D::upright(bx - 30, feetY);
-        drawHuman(c, f, pose, ms * 0.014f, ms, WHITE);
+        drawHuman(c, f, pose, ms * 0.014f, ms, COL_WHITE);
     }
 };
 
@@ -413,19 +237,7 @@ public:
     const char *name() const override { return "Stargazer"; }
 
     void frame(GFXcanvas16 &c, uint32_t ms) override {
-        for (int i = 0; i < 26; i++) {
-            int sx = (int)(frand(i * 13 + 3) * 124) + 2;
-            int sy = (int)(frand(i * 13 + 4) * 92) + 2;
-            float tw = sinf(ms * 0.0025f + i * 2.1f);
-            uint16_t col = tw > 0.4f ? WHITE : (tw > -0.4f ? SKY_STAR : DIMGRAY);
-            c.drawPixel(sx, sy, col);
-            if (tw > 0.8f) {
-                c.drawPixel(sx - 1, sy, SKY_STAR);
-                c.drawPixel(sx + 1, sy, SKY_STAR);
-            }
-        }
-        c.fillCircle(106, 18, 9, MOON);
-        c.fillCircle(110, 15, 8, BLACK);
+        drawNightSky(c, ms, 98);
 
         uint32_t sp = ms % 7000;
         if (sp < 700) {
@@ -433,23 +245,184 @@ public:
             int ox = (int)(frand(ep + 21) * 70) + 10;
             int oy = (int)(frand(ep + 22) * 30) + 8;
             int d = sp / 14;
-            c.drawLine(ox + d - 8, oy + d / 2 - 4, ox + d, oy + d / 2, WHITE);
+            c.drawLine(ox + d - 8, oy + d / 2 - 4, ox + d, oy + d / 2, COL_WHITE);
         }
 
-        c.fillCircle(64, 176, 74, HILL);
-        seated(c, 46, 104);
-        seated(c, 74, 104);
+        c.fillCircle(64, 176, 74, COL_HILL);
+        drawSeated(c, 46, 104);
+        drawSeated(c, 74, 104);
     }
+};
 
-private:
-    // seated figure leaning back on their arms, face tilted up at the sky
-    static void seated(GFXcanvas16 &c, int x, int y) {
-        c.drawLine(x, y, x - 4, y - 10, WHITE);        // torso, leaning back
-        c.fillCircle(x - 4, y - 13, 3, WHITE);         // head, tipped skyward
-        c.drawLine(x, y, x + 6, y - 4, WHITE);         // thigh raised
-        c.drawLine(x + 6, y - 4, x + 8, y + 1, WHITE); // shin to the grass
-        c.drawLine(x - 4, y - 10, x - 9, y + 1, WHITE);  // propping arm
-        c.drawLine(x - 4, y - 10, x - 6, y + 1, WHITE);  // second arm
+// ---------------------------------------------------------------- Campfire
+
+class CampfireAnim : public Animation {
+public:
+    const char *name() const override { return "Campfire"; }
+
+    void frame(GFXcanvas16 &c, uint32_t ms) override {
+        drawNightSky(c, ms, 100);
+        c.drawLine(0, 110, ANIM_W, 110, COL_DIMGRAY);
+
+        drawSeated(c, 38, 108);
+        drawSeated(c, 90, 108);
+
+        float flicker = 0.7f + 0.3f * sinf(ms * 0.008f);
+        int baseY = 108;
+        int cx = 64;
+        uint16_t flame = rgb565((uint8_t)(220 * flicker), (uint8_t)(120 * flicker), 20);
+        uint16_t core = rgb565(255, (uint8_t)(200 * flicker), 40);
+
+        for (int i = 0; i < 4; i++) {
+            float j = frand(ms / 80 + i * 17) * 4 - 2;
+            int h = (int)(14 * flicker + j);
+            c.fillTriangle(cx - 8 + i * 2, baseY, cx + i * 2, baseY - h, cx + 8 + i * 2, baseY,
+                           flame);
+        }
+        c.fillTriangle(cx - 4, baseY, cx, baseY - (int)(10 * flicker), cx + 4, baseY, core);
+
+        // sparks drift up and fade from yellow through gray
+        for (int s = 0; s < 5; s++) {
+            uint32_t seed = s * 97 + 3;
+            float life = (ms * 0.001f + frand(seed) * 4.0f);
+            life = fmodf(life, 4.0f);
+            if (life > 3.2f) continue;
+            int sx = cx + (int)((frand(seed + 1) - 0.5f) * 16);
+            int sy = baseY - (int)(life * 28);
+            uint16_t spark = life < 1.5f ? COL_YELLOW : COL_DIMGRAY;
+            c.drawPixel(sx, sy, spark);
+            if (life < 0.8f) c.drawPixel(sx + 1, sy - 1, COL_ORANGE);
+        }
+    }
+};
+
+// ---------------------------------------------------------------- Owl
+
+class OwlAnim : public Animation {
+public:
+    const char *name() const override { return "Owl"; }
+
+    void frame(GFXcanvas16 &c, uint32_t ms) override {
+        c.drawLine(20, 72, 108, 68, COL_WOOD);
+        c.drawLine(20, 73, 108, 69, COL_DIMGRAY);
+
+        int ox = 64, oy = 58;
+        c.fillCircle(ox, oy, 14, COL_GRAY);
+        c.fillTriangle(ox - 10, oy - 10, ox - 6, oy - 18, ox - 2, oy - 10, COL_GRAY);
+        c.fillTriangle(ox + 2, oy - 10, ox + 6, oy - 18, ox + 10, oy - 10, COL_GRAY);
+
+        // head sweeps left to right and back, blinking at the turn
+        constexpr uint32_t CYCLE = 6000;
+        uint32_t t = ms % CYCLE;
+        float headAngle = 0;
+        if (t < 2000)
+            headAngle = -1.0f + t / 1000.0f;
+        else if (t < 4000)
+            headAngle = 1.0f - (t - 2000) / 1000.0f;
+
+        bool blink = t > 2400 && t < 2600;
+        int pupilOff = (int)(headAngle * 2);
+
+        c.fillCircle(ox - 5, oy - 2, 4, COL_WHITE);
+        c.fillCircle(ox + 5, oy - 2, 4, COL_WHITE);
+        if (!blink) {
+            c.fillCircle(ox - 5 + pupilOff, oy - 2, 2, COL_BLACK);
+            c.fillCircle(ox + 5 + pupilOff, oy - 2, 2, COL_BLACK);
+        } else {
+            c.drawLine(ox - 8, oy - 2, ox - 2, oy - 2, COL_BLACK);
+            c.drawLine(ox + 2, oy - 2, ox + 8, oy - 2, COL_BLACK);
+        }
+        c.fillCircle(ox, oy + 4, 3, COL_ORANGE);
+
+        // a mouse scurries across the ground while the owl watches
+        if (t >= 3000) {
+            float mp = (t - 3000) / 2000.0f;
+            if (mp <= 1.0f) {
+                int mx = (int)(mp * (ANIM_W - 16)) + 4;
+                int my = ANIM_H - 6;
+                c.fillRect(mx, my, 5, 2, COL_GRAY);
+                c.drawPixel(mx + 5, my, COL_WHITE);
+                c.drawPixel(mx - 1, my + 1, COL_GRAY);
+            }
+        }
+    }
+};
+
+// ---------------------------------------------------------------- Juggler
+
+// Balls follow a three-ball cascade: each flies hand to hand on a sine arc,
+// staggered a third of a period apart.
+void juggleBallPos(uint32_t ms, int ball, int &x, int &y) {
+    constexpr float PERIOD = 1100.0f;
+    constexpr float LEFT_X = 48.0f;
+    constexpr float RIGHT_X = 80.0f;
+    constexpr float HAND_Y = 90.0f;
+    constexpr float APEX_Y = 38.0f;
+
+    float t = fmodf(ms / PERIOD + ball / 3.0f, 1.0f);
+    float half = t * 2.0f;
+    int segment = (int)half;
+    float local = half - segment;
+    float x0 = (segment % 2 == 0) ? LEFT_X : RIGHT_X;
+    float x1 = (segment % 2 == 0) ? RIGHT_X : LEFT_X;
+    x = (int)(x0 + (x1 - x0) * local + 0.5f);
+    y = (int)(HAND_Y - sinf(local * ANIM_PI) * (HAND_Y - APEX_Y) + 0.5f);
+}
+
+// two-segment arm bent slightly at the elbow, reaching toward a target
+void drawArmTo(GFXcanvas16 &c, int sx, int sy, int tx, int ty, uint16_t col) {
+    int mx = (sx + tx) / 2;
+    int my = (sy + ty) / 2 - 2;
+    c.drawLine(sx, sy, mx, my, col);
+    c.drawLine(mx, my, tx, ty, col);
+}
+
+class JugglerAnim : public Animation {
+public:
+    const char *name() const override { return "Juggler"; }
+
+    void frame(GFXcanvas16 &c, uint32_t ms) override {
+        c.drawLine(10, 115, ANIM_W - 10, 115, COL_DIMGRAY);
+
+        int cx = 64 + (int)(sinf(ms * 0.005f) * 2);
+        int bx[3], by[3];
+        for (int i = 0; i < 3; i++) juggleBallPos(ms, i, bx[i], by[i]);
+
+        Frame2D f = Frame2D::upright((float)cx, 100.0f);
+        float lean = 1.0f;
+        float shoulderH = 16.0f;
+
+        auto leg = [&](float thigh, float bend) {
+            float ka = sinf(thigh) * 5.5f, kh = 9 - cosf(thigh) * 5.5f;
+            float shin = thigh - bend;
+            float fa = ka + sinf(shin) * 5.0f, fh = kh - cosf(shin) * 5.0f;
+            if (fh < -0.5f) fh = -0.5f;
+            c.drawLine(f.X(0, 9), f.Y(0, 9), f.X(ka, kh), f.Y(ka, kh), COL_WHITE);
+            c.drawLine(f.X(ka, kh), f.Y(ka, kh), f.X(fa, fh), f.Y(fa, fh), COL_WHITE);
+        };
+        leg(0.12f, 0.1f);
+        leg(-0.12f, 0.08f);
+
+        c.drawLine(f.X(0, 9), f.Y(0, 9), f.X(lean, shoulderH), f.Y(lean, shoulderH),
+                   COL_WHITE);
+        c.fillCircle(f.X(0, 20), f.Y(0, 20), 3, COL_WHITE);
+
+        // each hand tracks whichever ball is nearest its side
+        int lsx = f.X(lean, shoulderH);
+        int lsy = f.Y(lean, shoulderH);
+        int leftTarget = 0, rightTarget = 0;
+        float leftDist = 999.0f, rightDist = 999.0f;
+        for (int i = 0; i < 3; i++) {
+            float dl = fabsf((float)bx[i] - 48.0f);
+            float dr = fabsf((float)bx[i] - 80.0f);
+            if (dl < leftDist) { leftDist = dl; leftTarget = i; }
+            if (dr < rightDist) { rightDist = dr; rightTarget = i; }
+        }
+        drawArmTo(c, lsx, lsy, bx[leftTarget], by[leftTarget], COL_WHITE);
+        drawArmTo(c, lsx, lsy, bx[rightTarget], by[rightTarget], COL_WHITE);
+
+        const uint16_t colors[3] = {COL_RED, COL_YELLOW, COL_WHITE};
+        for (int i = 0; i < 3; i++) c.fillCircle(bx[i], by[i], 4, colors[i]);
     }
 };
 
@@ -458,15 +431,11 @@ private:
 // The matrix driver's block averaging reproduces them one LED per cell; on
 // the TFT they render as chunky pixel art.
 
-constexpr int CELL = W / 8;
+constexpr int CELL = ANIM_W / 8;
 
 void px(GFXcanvas16 &c, int x, int y, uint16_t col) {
     if (x < 0 || x > 7 || y < 0 || y > 7) return;
     c.fillRect(x * CELL, y * CELL, CELL, CELL, col);
-}
-
-uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
-    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
 
 uint16_t hueColor(uint8_t h) {
@@ -578,7 +547,7 @@ public:
             step();
         }
 
-        px(c, foodX_, foodY_, RED);
+        px(c, foodX_, foodY_, COL_RED);
         for (int i = len_ - 1; i >= 0; i--) {
             uint8_t g = i == 0 ? 255 : (uint8_t)(190 - i * 6);
             px(c, bodyX_[i], bodyY_[i], rgb565(0, g, i == 0 ? 60 : 0));
@@ -721,6 +690,9 @@ RunnerAnim runner;
 SisyphusAnim sisyphus;
 BalloonAnim balloon;
 StargazerAnim stargazer;
+CampfireAnim campfire;
+OwlAnim owl;
+JugglerAnim juggler;
 RainbowAnim rainbow;
 FireAnim fire;
 RainAnim rain;
@@ -728,12 +700,22 @@ HeartAnim heart;
 SnakeAnim snake;
 SmileyAnim smiley;
 
-Animation *ANIMS[] = {&face,    &fisherman, &runner, &sisyphus, &balloon, &stargazer,
-                      &rainbow, &fire,      &rain,   &heart,    &snake,   &smiley};
+// Scene animations first, then the 8x8-native low-res set. sceneAnimationList
+// exposes the scene prefix, so scenes must stay contiguous at the front.
+Animation *ANIMS[] = {&face, &fisherman, &runner, &sisyphus, &balloon,
+                      &stargazer, &campfire, &owl, &juggler,
+                      &rainbow, &fire, &rain, &heart, &snake, &smiley};
+
+constexpr int SCENE_COUNT = 9;
 
 }  // namespace
 
 Animation **animationList(int &count) {
     count = sizeof(ANIMS) / sizeof(ANIMS[0]);
+    return ANIMS;
+}
+
+Animation **sceneAnimationList(int &count) {
+    count = SCENE_COUNT;
     return ANIMS;
 }

@@ -17,7 +17,7 @@ Both run the same firmware core and the same app. The device reports its display
 
 ## Animations
 
-Twelve built-in, all drawn procedurally at runtime. Six scene animations:
+Fifteen built-in, all drawn procedurally at runtime. Nine scene animations:
 
 1. **Face** — eyes that look around, blink, and change expression
 2. **Fisherman** — a rower poling his boat across moonlit water
@@ -25,19 +25,22 @@ Twelve built-in, all drawn procedurally at runtime. Six scene animations:
 4. **Sisyphus** — pushes his boulder around the screen edge; it always rolls back
 5. **Balloon** — a kid chasing a balloon he never catches
 6. **Stargazer** — two figures on a hill under a twinkling sky with shooting stars
+7. **Campfire** — two figures around a flickering fire under the night sky
+8. **Owl** — an owl on a branch scanning for the mouse that crosses below
+9. **Juggler** — a stick figure juggling a three-ball cascade
 
 Six low-res animations designed on an 8×8 grid, native to the LED matrix (chunky pixel art on the TFT):
 
-7. **Rainbow** — a color wave sweeping the grid
-8. **Fire** — rising-flame heat simulation
-9. **Rain** — drops falling at different speeds with fading trails
-10. **Heart** — pixel heart with a lub-dub pulse
-11. **Snake** — the game, playing itself
-12. **Smiley** — big pixel face cycling expressions: smiles, winks, surprise
+10. **Rainbow** — a color wave sweeping the grid
+11. **Fire** — rising-flame heat simulation
+12. **Rain** — drops falling at different speeds with fading trails
+13. **Heart** — pixel heart with a lub-dub pulse
+14. **Snake** — the game, playing itself
+15. **Smiley** — big pixel face cycling expressions: smiles, winks, surprise
 
 ## App
 
-SwiftUI + CoreBluetooth. Connects automatically, lists the animations the case reports, sets brightness.
+SwiftUI + CoreBluetooth. Connects automatically, lists the animations the case reports grouped by resolution, sets brightness and playback speed.
 
 <img src="docs/images/app-screenshot.png" width="300" alt="Companion app">
 
@@ -64,3 +67,17 @@ pio run -e case-b-matrix -t upload
 ```
 
 App: open `app/LEDCase.swiftpm` in Xcode and run it on an iPhone.
+
+## Browser emulator
+
+Preview the **128×128** scene animations in a web browser without hardware.
+The emulator compiles `firmware/src/animations.cpp` to WebAssembly. See
+[emulator/README.md](emulator/README.md).
+
+```bash
+cd emulator
+./scripts/build-wasm.sh
+python3 -m http.server 8080
+```
+
+Open http://localhost:8080

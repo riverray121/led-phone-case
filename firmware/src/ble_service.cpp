@@ -11,6 +11,7 @@ const char *CHR_ANIM_LIST = "7A0B0002-63B1-4A6F-8D3A-6E1C2A5B9D01";
 const char *CHR_ANIM_SELECT = "7A0B0003-63B1-4A6F-8D3A-6E1C2A5B9D01";
 const char *CHR_BRIGHTNESS = "7A0B0004-63B1-4A6F-8D3A-6E1C2A5B9D01";
 const char *CHR_DISPLAY_INFO = "7A0B0005-63B1-4A6F-8D3A-6E1C2A5B9D01";
+const char *CHR_SPEED = "7A0B0006-63B1-4A6F-8D3A-6E1C2A5B9D01";
 
 NimBLECharacteristic *animSelectChr = nullptr;
 int gAnimCount = 0;
@@ -32,21 +33,41 @@ class AnimSelectCallbacks : public NimBLECharacteristicCallbacks {
     }
 };
 
-class BrightnessCallbacks : public NimBLECharacteristicCallbacks {
+// Forwards a single-byte write into a BleState pending field.
+class ByteWriteCallbacks : public NimBLECharacteristicCallbacks {
+public:
+    explicit ByteWriteCallbacks(volatile int *target) : target_(target) {}
+
+private:
     void onWrite(NimBLECharacteristic *chr) override {
         std::string v = chr->getValue();
-        if (!v.empty()) bleState.pendingBrightness = (uint8_t)v[0];
+        if (!v.empty()) *target_ = (uint8_t)v[0];
     }
+
+    volatile int *target_;
 };
 
 ServerCallbacks serverCallbacks;
 AnimSelectCallbacks animSelectCallbacks;
-BrightnessCallbacks brightnessCallbacks;
+ByteWriteCallbacks brightnessCallbacks(&bleState.pendingBrightness);
+ByteWriteCallbacks speedCallbacks(&bleState.pendingSpeed);
+
+// Read/write characteristic holding one byte.
+NimBLECharacteristic *createByteChr(NimBLEService *svc, const char *uuid,
+                                    uint8_t initial,
+                                    NimBLECharacteristicCallbacks *callbacks) {
+    NimBLECharacteristic *chr =
+        svc->createCharacteristic(uuid, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
+    chr->setValue(&initial, 1);
+    chr->setCallbacks(callbacks);
+    return chr;
+}
 
 }  // namespace
 
 void bleBegin(const char *animNamesCsv, int animCount, uint8_t initialAnim,
-              uint8_t initialBrightness, const uint8_t displayInfo[4]) {
+              uint8_t initialBrightness, uint8_t initialSpeed,
+              const uint8_t displayInfo[5]) {
     gAnimCount = animCount;
 
     NimBLEDevice::init("LED Case");
@@ -65,14 +86,12 @@ void bleBegin(const char *animNamesCsv, int animCount, uint8_t initialAnim,
     animSelectChr->setValue(&initialAnim, 1);
     animSelectChr->setCallbacks(&animSelectCallbacks);
 
-    NimBLECharacteristic *bright = svc->createCharacteristic(
-        CHR_BRIGHTNESS, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
-    bright->setValue(&initialBrightness, 1);
-    bright->setCallbacks(&brightnessCallbacks);
+    createByteChr(svc, CHR_BRIGHTNESS, initialBrightness, &brightnessCallbacks);
+    createByteChr(svc, CHR_SPEED, initialSpeed, &speedCallbacks);
 
     NimBLECharacteristic *di =
         svc->createCharacteristic(CHR_DISPLAY_INFO, NIMBLE_PROPERTY::READ);
-    di->setValue(displayInfo, 4);
+    di->setValue(displayInfo, 5);
 
     svc->start();
 

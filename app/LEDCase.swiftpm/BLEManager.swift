@@ -3,25 +3,35 @@ import CoreBluetooth
 
 /// Connects to the case over BLE. Protocol mirrors firmware/src/ble_service.h:
 /// AnimList (read, CSV names), AnimSelect (read/write/notify, uint8 index),
-/// Brightness (read/write, uint8), DisplayInfo (read, [type, w, h, bpp]).
+/// Brightness (read/write, uint8), DisplayInfo (read, [type, w, h, bpp,
+/// sceneCount]), Speed (read/write, uint8 in 1/16ths, 16 = 1x). The first
+/// sceneCount entries of AnimList are 128x128 scenes; the rest are 8x8
+/// low-res animations.
 final class BLEManager: NSObject, ObservableObject {
     static let serviceUUID = CBUUID(string: "7A0B0001-63B1-4A6F-8D3A-6E1C2A5B9D01")
     static let animListUUID = CBUUID(string: "7A0B0002-63B1-4A6F-8D3A-6E1C2A5B9D01")
     static let animSelectUUID = CBUUID(string: "7A0B0003-63B1-4A6F-8D3A-6E1C2A5B9D01")
     static let brightnessUUID = CBUUID(string: "7A0B0004-63B1-4A6F-8D3A-6E1C2A5B9D01")
     static let displayInfoUUID = CBUUID(string: "7A0B0005-63B1-4A6F-8D3A-6E1C2A5B9D01")
+    static let speedUUID = CBUUID(string: "7A0B0006-63B1-4A6F-8D3A-6E1C2A5B9D01")
+
+    /// Speed characteristic value for 1x playback.
+    static let speedOne = 16.0
 
     @Published var status = "Starting Bluetooth…"
     @Published var connected = false
     @Published var animations: [String] = []
     @Published var selected: Int = -1
     @Published var brightness: Double = 255
+    @Published var speed: Double = speedOne
     @Published var displayInfo = ""
+    @Published var sceneCount = 0
 
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var animSelectChr: CBCharacteristic?
     private var brightnessChr: CBCharacteristic?
+    private var speedChr: CBCharacteristic?
 
     override init() {
         super.init()
@@ -30,13 +40,20 @@ final class BLEManager: NSObject, ObservableObject {
 
     func select(_ index: Int) {
         selected = index
-        guard let chr = animSelectChr else { return }
-        peripheral?.writeValue(Data([UInt8(index)]), for: chr, type: .withResponse)
+        writeByte(Double(index), to: animSelectChr)
     }
 
     func applyBrightness() {
-        guard let chr = brightnessChr else { return }
-        peripheral?.writeValue(Data([UInt8(brightness)]), for: chr, type: .withResponse)
+        writeByte(brightness, to: brightnessChr)
+    }
+
+    func applySpeed() {
+        writeByte(speed, to: speedChr)
+    }
+
+    private func writeByte(_ value: Double, to chr: CBCharacteristic?) {
+        guard let chr else { return }
+        peripheral?.writeValue(Data([UInt8(value)]), for: chr, type: .withResponse)
     }
 
     private func startScan() {
@@ -80,8 +97,10 @@ extension BLEManager: CBCentralManagerDelegate {
         connected = false
         animations = []
         selected = -1
+        sceneCount = 0
         animSelectChr = nil
         brightnessChr = nil
+        speedChr = nil
         startScan()
     }
 
@@ -111,6 +130,9 @@ extension BLEManager: CBPeripheralDelegate {
             case Self.brightnessUUID:
                 brightnessChr = chr
                 peripheral.readValue(for: chr)
+            case Self.speedUUID:
+                speedChr = chr
+                peripheral.readValue(for: chr)
             default:
                 break
             }
@@ -128,11 +150,14 @@ extension BLEManager: CBPeripheralDelegate {
             if let first = data.first { selected = Int(first) }
         case Self.brightnessUUID:
             if let first = data.first { brightness = Double(first) }
+        case Self.speedUUID:
+            if let first = data.first { speed = Double(first) }
         case Self.displayInfoUUID:
             if data.count >= 4 {
                 let type = data[0] == 1 ? "TFT" : "LED matrix"
                 displayInfo = "\(type) \(data[1])×\(data[2]), \(data[3])-bit color"
             }
+            sceneCount = data.count >= 5 ? Int(data[4]) : 0
         default:
             break
         }

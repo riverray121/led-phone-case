@@ -98,7 +98,7 @@ Bench-test on a power bank first.
 
 BLE, not the cable: iOS blocks USB accessory data without MFi. Swift + CoreBluetooth on the phone, GATT server on the ESP32.
 
-Implemented (v0): select from the firmware's built-in animations, set brightness. Planned:
+Implemented (v0): select from the firmware's built-in animations, set brightness and playback speed. Planned:
 
 - Stream frames live from the app
 - Upload animations to ESP32 flash and play them standalone
@@ -120,12 +120,14 @@ Device name `LED Case`. One service, UUID base `7A0Bxxxx-63B1-4A6F-8D3A-6E1C2A5B
 | AnimList | 0002 | read | UTF-8, comma-separated animation names |
 | AnimSelect | 0003 | read/write/notify | uint8 index into AnimList |
 | Brightness | 0004 | read/write | uint8 0-255 |
-| DisplayInfo | 0005 | read | uint8[4]: type (1=TFT, 2=matrix), width, height, bits/px |
+| DisplayInfo | 0005 | read | uint8[5]: type (1=TFT, 2=matrix), width, height, bits/px, scene count (leading AnimList entries that are 128×128 scenes; the rest are 8×8 low-res) |
+| Speed | 0006 | read/write | uint8 playback speed in 1/16ths (16 = 1×) |
 
 ### Repo layout
 
-- `firmware/` — PlatformIO project (ESP32-C3, Arduino framework), one environment per case: `case-a-tft` (default) and `case-b-matrix` (`pio run -e case-b-matrix -t upload`). `src/case_display.h` is the driver interface with one implementation file per display; `src/animations.*` the engine; `src/ble_service.*` the GATT server. The matrix driver renders the same 128×128 canvas and averages 16×16 blocks per LED. `tools/wiring_test.py` is a MicroPython bring-up check for freshly soldered Case A boards.
+- `firmware/` — PlatformIO project (ESP32-C3, Arduino framework), one environment per case: `case-a-tft` (default) and `case-b-matrix` (`pio run -e case-b-matrix -t upload`). `src/case_display.h` is the driver interface with one implementation file per display; `src/animations.*` the engine, with helpers shared with the emulator in `src/animation_shared.*`; `src/ble_service.*` the GATT server. The matrix driver renders the same 128×128 canvas and averages 16×16 blocks per LED. `tools/wiring_test.py` is a MicroPython bring-up check for freshly soldered Case A boards.
 - `app/LEDCase.swiftpm` — iOS companion app (Swift Playgrounds app package). Open in Xcode, run on an iPhone.
+- `emulator/` — browser preview of the scene animations, compiled from `firmware/src` to WebAssembly. See `emulator/README.md`.
 
 ## Display paths long-term
 

@@ -3,20 +3,28 @@
 //   0002 AnimList    read          comma-separated animation names
 //   0003 AnimSelect  read/write/notify  uint8 index into AnimList
 //   0004 Brightness  read/write    uint8 0-255
-//   0005 DisplayInfo read          uint8[4]: type, width, height, bits/px
+//   0005 DisplayInfo read          uint8[5]: type, width, height, bits/px,
+//                                  scene count (AnimList entries before this
+//                                  count are 128x128 scenes, the rest 8x8)
+//   0006 Speed       read/write    uint8 playback speed in 1/16ths (16 = 1x)
 // Writes land in pending* fields; the main loop applies them so all display
 // work stays on one core context.
 #pragma once
 
 #include <stdint.h>
 
+// Speed characteristic value for 1x playback.
+constexpr uint8_t SPEED_ONE = 16;
+
 struct BleState {
     volatile int pendingAnim = -1;
     volatile int pendingBrightness = -1;
+    volatile int pendingSpeed = -1;
 };
 
 extern BleState bleState;
 
 void bleBegin(const char *animNamesCsv, int animCount, uint8_t initialAnim,
-              uint8_t initialBrightness, const uint8_t displayInfo[4]);
+              uint8_t initialBrightness, uint8_t initialSpeed,
+              const uint8_t displayInfo[5]);
 void bleNotifyAnim(uint8_t index);
