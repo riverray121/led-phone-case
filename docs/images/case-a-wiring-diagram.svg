@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" font-family="ui-monospace, Menlo, Consolas, monospace">
+  <rect width="960" height="720" rx="12" fill="#11141a"/>
+
+  <text x="70" y="52" font-size="20" fill="#e6e6e6">Case A wiring: 1.44" ST7735 TFT (M029) to ESP32-C3 SuperMini</text>
+
+  <!-- TFT module -->
+  <rect x="70" y="110" width="240" height="316" rx="8" fill="#14335c" stroke="#2a5a94" stroke-width="2"/>
+  <rect x="95" y="150" width="190" height="200" fill="#000" stroke="#3b4252"/>
+  <text x="190" y="258" font-size="13" fill="#4a5568" text-anchor="middle">128 x 128</text>
+  <text x="70" y="98" font-size="14" fill="#9aa0a6">1.44" TFT LCD, ST7735</text>
+
+  <!-- TFT pads and labels -->
+  <g font-size="14" text-anchor="end">
+    <circle cx="310" cy="140" r="5" fill="#c9a227"/><text x="296" y="145" fill="#ffffff">GND</text>
+    <circle cx="310" cy="176" r="5" fill="#c9a227"/><text x="296" y="181" fill="#ffffff">VCC</text>
+    <circle cx="310" cy="212" r="5" fill="#c9a227"/><text x="296" y="217" fill="#ffffff">SCL</text>
+    <circle cx="310" cy="248" r="5" fill="#c9a227"/><text x="296" y="253" fill="#ffffff">SDA</text>
+    <circle cx="310" cy="284" r="5" fill="#c9a227"/><text x="296" y="289" fill="#ffffff">RES</text>
+    <circle cx="310" cy="320" r="5" fill="#c9a227"/><text x="296" y="325" fill="#ffffff">DC</text>
+    <circle cx="310" cy="356" r="5" fill="#c9a227"/><text x="296" y="361" fill="#ffffff">CS</text>
+    <circle cx="310" cy="392" r="5" fill="#c9a227"/><text x="296" y="397" fill="#ffffff">BL</text>
+  </g>
+
+  <!-- ESP32-C3 SuperMini -->
+  <rect x="620" y="100" width="180" height="340" rx="8" fill="#1c1f26" stroke="#3b4252" stroke-width="2"/>
+  <rect x="672" y="66" width="76" height="42" rx="6" fill="#565d6b"/>
+  <text x="662" y="92" font-size="13" fill="#9aa0a6" text-anchor="end">USB-C to phone</text>
+  <rect x="668" y="200" width="84" height="84" fill="#2a2e38" stroke="#3b4252"/>
+  <text x="710" y="248" font-size="11" fill="#5a6272" text-anchor="middle">ESP32-C3</text>
+  <text x="620" y="466" font-size="14" fill="#9aa0a6">ESP32-C3 SuperMini (USB up)</text>
+
+  <!-- left pin column: 5 6 7 8 9 10 20 21 -->
+  <g font-size="14" text-anchor="start">
+    <circle cx="620" cy="140" r="5" fill="#c9a227"/><text x="634" y="145" fill="#ffffff">5</text>
+    <circle cx="620" cy="176" r="5" fill="#c9a227"/><text x="634" y="181" fill="#ffffff">6</text>
+    <circle cx="620" cy="212" r="5" fill="#c9a227"/><text x="634" y="217" fill="#ffffff">7</text>
+    <circle cx="620" cy="248" r="5" fill="#3b4252"/><text x="634" y="253" fill="#6a7180">8</text>
+    <circle cx="620" cy="284" r="5" fill="#3b4252"/><text x="634" y="289" fill="#6a7180">9</text>
+    <circle cx="620" cy="320" r="5" fill="#c9a227"/><text x="634" y="325" fill="#ffffff">10</text>
+    <circle cx="620" cy="356" r="5" fill="#3b4252"/><text x="634" y="361" fill="#6a7180">20</text>
+    <circle cx="620" cy="392" r="5" fill="#3b4252"/><text x="634" y="397" fill="#6a7180">21</text>
+  </g>
+
+  <!-- right pin column: 5V G 3.3 4 3 2 1 0 -->
+  <g font-size="14" text-anchor="end">
+    <circle cx="800" cy="140" r="5" fill="#3b4252"/><text x="786" y="145" fill="#6a7180">5V</text>
+    <circle cx="800" cy="176" r="5" fill="#c9a227"/><text x="786" y="181" fill="#ffffff">G</text>
+    <circle cx="800" cy="212" r="5" fill="#c9a227"/><text x="786" y="217" fill="#ffffff">3.3</text>
+    <circle cx="800" cy="248" r="5" fill="#c9a227"/><text x="786" y="253" fill="#ffffff">4</text>
+    <circle cx="800" cy="284" r="5" fill="#3b4252"/><text x="786" y="289" fill="#6a7180">3</text>
+    <circle cx="800" cy="320" r="5" fill="#3b4252"/><text x="786" y="325" fill="#6a7180">2</text>
+    <circle cx="800" cy="356" r="5" fill="#c9a227"/><text x="786" y="361" fill="#ffffff">1</text>
+    <circle cx="800" cy="392" r="5" fill="#3b4252"/><text x="786" y="397" fill="#6a7180">0</text>
+  </g>
+
+  <!-- wires to the left column (direct) -->
+  <g fill="none" stroke-width="3" stroke-linecap="round">
+    <path d="M310,320 C440,320 480,140 620,140" stroke="#3b82f6"/>
+    <path d="M310,248 C440,248 480,176 620,176" stroke="#46a758"/>
+    <path d="M310,356 C440,356 480,212 620,212" stroke="#a855f7"/>
+    <path d="M310,284 C440,284 480,320 620,320" stroke="#f76b15"/>
+  </g>
+
+  <!-- wires to the right column (routed under the board) -->
+  <g fill="none" stroke-width="3" stroke-linecap="round">
+    <path d="M310,140 C400,146 340,502 600,502 C780,502 842,470 842,380 L842,214 C842,184 832,176 800,176" stroke="#9aa0a6"/>
+    <path d="M310,176 C400,182 340,522 600,522 C790,522 860,478 860,380 L860,250 C860,220 846,212 800,212" stroke="#e5484d"/>
+    <path d="M310,212 C400,218 340,542 600,542 C800,542 878,486 878,380 L878,286 C878,256 862,248 800,248" stroke="#f5d90a"/>
+    <path d="M310,392 C400,398 340,562 600,562 C810,562 896,494 896,400 C896,368 862,356 800,356" stroke="#f472b6"/>
+  </g>
+
+  <!-- legend -->
+  <g font-size="14" fill="#e6e6e6">
+    <line x1="70" y1="612" x2="98" y2="612" stroke="#9aa0a6" stroke-width="3"/><text x="108" y="617">GND to G</text>
+    <line x1="290" y1="612" x2="318" y2="612" stroke="#e5484d" stroke-width="3"/><text x="328" y="617">VCC to 3V3</text>
+    <line x1="510" y1="612" x2="538" y2="612" stroke="#f5d90a" stroke-width="3"/><text x="548" y="617">SCL to GPIO4</text>
+    <line x1="730" y1="612" x2="758" y2="612" stroke="#46a758" stroke-width="3"/><text x="768" y="617">SDA to GPIO6</text>
+    <line x1="70" y1="642" x2="98" y2="642" stroke="#f76b15" stroke-width="3"/><text x="108" y="647">RES to GPIO10</text>
+    <line x1="290" y1="642" x2="318" y2="642" stroke="#3b82f6" stroke-width="3"/><text x="328" y="647">DC to GPIO5</text>
+    <line x1="510" y1="642" x2="538" y2="642" stroke="#a855f7" stroke-width="3"/><text x="548" y="647">CS to GPIO7</text>
+    <line x1="730" y1="642" x2="758" y2="642" stroke="#f472b6" stroke-width="3"/><text x="768" y="647">BL to GPIO1</text>
+  </g>
+
+  <text x="70" y="682" font-size="12" fill="#8a8f98">GPIO 2, 8, 9 are strapping pins: leave unconnected. GPIO0 also stays empty; firmware reserves it as parked SPI MISO.</text>
+  <text x="70" y="702" font-size="12" fill="#8a8f98">Power comes from the phone over USB-C. Nothing connects to the 5V pin.</text>
+</svg>

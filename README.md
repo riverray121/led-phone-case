@@ -57,6 +57,10 @@ The simplest build. Generic modules; any equivalent listing works.
 | 3D-printed carrier plate and cover | 1 | Any PLA or PETG |
 | Thin hookup wire | ~8 leads | Display to board, ~30 AWG |
 
+## Wiring (Case A)
+
+<img src="docs/images/case-a-wiring-diagram.svg" width="720" alt="Wiring diagram: TFT pins GND, VCC, SCL, SDA, RES, DC, CS, BL to ESP32-C3 pins G, 3V3, GPIO4, GPIO6, GPIO10, GPIO5, GPIO7, GPIO1">
+
 <img src="docs/images/case-a-wiring.jpg" width="640" alt="TFT and ESP32-C3 on the printed carrier">
 
 Case B swaps the TFT for an 8×8 WS2812 matrix plus a 74HCT04 level shifter, 330 Ω data resistor, and 1000 µF capacitor. Full wiring, pin map, power budget, and BLE protocol: [DESIGN.md](DESIGN.md).
