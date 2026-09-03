@@ -3,7 +3,9 @@ import CoreBluetooth
 
 /// Connects to the case over BLE. Protocol mirrors firmware/src/ble_service.h:
 /// AnimList (read, CSV names), AnimSelect (read/write/notify, uint8 index),
-/// Brightness (read/write, uint8), DisplayInfo (read, [type, w, h, bpp]).
+/// Brightness (read/write, uint8), DisplayInfo (read, [type, w, h, bpp,
+/// sceneCount]). The first sceneCount entries of AnimList are 128x128 scenes;
+/// the rest are 8x8 low-res animations.
 final class BLEManager: NSObject, ObservableObject {
     static let serviceUUID = CBUUID(string: "7A0B0001-63B1-4A6F-8D3A-6E1C2A5B9D01")
     static let animListUUID = CBUUID(string: "7A0B0002-63B1-4A6F-8D3A-6E1C2A5B9D01")
@@ -17,6 +19,7 @@ final class BLEManager: NSObject, ObservableObject {
     @Published var selected: Int = -1
     @Published var brightness: Double = 255
     @Published var displayInfo = ""
+    @Published var sceneCount = 0
 
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
@@ -80,6 +83,7 @@ extension BLEManager: CBCentralManagerDelegate {
         connected = false
         animations = []
         selected = -1
+        sceneCount = 0
         animSelectChr = nil
         brightnessChr = nil
         startScan()
@@ -133,6 +137,7 @@ extension BLEManager: CBPeripheralDelegate {
                 let type = data[0] == 1 ? "TFT" : "LED matrix"
                 displayInfo = "\(type) \(data[1])×\(data[2]), \(data[3])-bit color"
             }
+            sceneCount = data.count >= 5 ? Int(data[4]) : 0
         default:
             break
         }

@@ -22,19 +22,16 @@ struct ContentView: View {
                 }
 
                 if ble.connected {
-                    Section("Animation") {
-                        ForEach(Array(ble.animations.enumerated()), id: \.offset) { index, name in
-                            Button {
-                                ble.select(index)
-                            } label: {
-                                HStack {
-                                    Text(name)
-                                    Spacer()
-                                    if index == ble.selected {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
+                    if ble.sceneCount > 0 && ble.sceneCount < ble.animations.count {
+                        Section("Scenes (128×128)") {
+                            animationRows(0..<ble.sceneCount)
+                        }
+                        Section("Low-res (8×8)") {
+                            animationRows(ble.sceneCount..<ble.animations.count)
+                        }
+                    } else {
+                        Section("Animation") {
+                            animationRows(0..<ble.animations.count)
                         }
                     }
 
@@ -46,6 +43,22 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("LED Case")
+        }
+    }
+
+    private func animationRows(_ range: Range<Int>) -> some View {
+        ForEach(range, id: \.self) { index in
+            Button {
+                ble.select(index)
+            } label: {
+                HStack {
+                    Text(ble.animations[index])
+                    Spacer()
+                    if index == ble.selected {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
         }
     }
 }

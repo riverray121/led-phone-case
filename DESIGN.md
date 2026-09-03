@@ -120,7 +120,7 @@ Device name `LED Case`. One service, UUID base `7A0Bxxxx-63B1-4A6F-8D3A-6E1C2A5B
 | AnimList | 0002 | read | UTF-8, comma-separated animation names |
 | AnimSelect | 0003 | read/write/notify | uint8 index into AnimList |
 | Brightness | 0004 | read/write | uint8 0-255 |
-| DisplayInfo | 0005 | read | uint8[4]: type (1=TFT, 2=matrix), width, height, bits/px |
+| DisplayInfo | 0005 | read | uint8[5]: type (1=TFT, 2=matrix), width, height, bits/px, scene count (leading AnimList entries that are 128×128 scenes; the rest are 8×8 low-res) |
 
 ### Repo layout
 

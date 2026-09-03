@@ -30,8 +30,12 @@ void setup() {
         namesCsv += anims[i]->name();
     }
 
-    uint8_t displayInfo[4];
+    int sceneCount = 0;
+    sceneAnimationList(sceneCount);
+
+    uint8_t displayInfo[5];
     display.info(displayInfo);
+    displayInfo[4] = (uint8_t)sceneCount;
     bleBegin(namesCsv.c_str(), animCount, currentAnim, display.brightness(), displayInfo);
     animStart = millis();
     Serial.printf("firmware v0: %d animations: %s\n", animCount, namesCsv.c_str());

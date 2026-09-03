@@ -46,7 +46,7 @@ BrightnessCallbacks brightnessCallbacks;
 }  // namespace
 
 void bleBegin(const char *animNamesCsv, int animCount, uint8_t initialAnim,
-              uint8_t initialBrightness, const uint8_t displayInfo[4]) {
+              uint8_t initialBrightness, const uint8_t displayInfo[5]) {
     gAnimCount = animCount;
 
     NimBLEDevice::init("LED Case");
@@ -72,7 +72,7 @@ void bleBegin(const char *animNamesCsv, int animCount, uint8_t initialAnim,
 
     NimBLECharacteristic *di =
         svc->createCharacteristic(CHR_DISPLAY_INFO, NIMBLE_PROPERTY::READ);
-    di->setValue(displayInfo, 4);
+    di->setValue(displayInfo, 5);
 
     svc->start();
 
