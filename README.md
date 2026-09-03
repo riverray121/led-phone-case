@@ -44,13 +44,18 @@ SwiftUI + CoreBluetooth. Connects automatically, lists the animations the case r
 
 <img src="docs/images/app-screenshot.png" width="300" alt="Companion app">
 
-## Parts (Case A)
+## Bill of materials (Case A)
 
-- ESP32-C3 SuperMini
-- 1.44" TFT LCD, 128×128, SPI (M029 module)
-- Clear TPU case
-- 3D-printed carrier plate and cover
-- USB-C cable to the phone
+The simplest build. Generic modules; any equivalent listing works.
+
+| Part | Qty | Notes |
+|---|---|---|
+| [ESP32-C3 SuperMini](https://www.amazon.com/AITRIP-ESP32-C3-Development-Supermini-Expansion/dp/B0FBG9N7M3) | 1 | Any ESP32-C3 SuperMini board |
+| [1.44" TFT LCD, 128×128, SPI, ST7735](https://www.amazon.com/HiLetgo-Colorful-Display-128X128-Replace/dp/B073R6SQRY) | 1 | 8-pin module (sold as M029 on AliExpress) |
+| [Clear TPU case, iPhone 16 Pro](https://www.amazon.com/TORRAS-iPhone-16-Pro-Non-Yellowing/dp/B0D9BGSGFR) | 1 | Soft/flexible, not polycarbonate |
+| [Short USB-C to USB-C cable](https://www.amazon.com/MCSPER-Short-USB-Cable/dp/B0D4VKQ62B) | 1 | 15-20 cm, phone to board |
+| 3D-printed carrier plate and cover | 1 | Any PLA or PETG |
+| Thin hookup wire | ~8 leads | Display to board, ~30 AWG |
 
 <img src="docs/images/case-a-wiring.jpg" width="640" alt="TFT and ESP32-C3 on the printed carrier">
 
