@@ -21,11 +21,9 @@ fi
   "$EMULATOR_ROOT/native/Adafruit_GFX.cpp" \
   "$EMULATOR_ROOT/native/glcdfont.cpp" \
   "$REPO_ROOT/firmware/src/animations.cpp" \
-  "$EMULATOR_ROOT/firmware/animation_shared.cpp" \
-  "$EMULATOR_ROOT/firmware/animations_extra.cpp" \
+  "$REPO_ROOT/firmware/src/animation_shared.cpp" \
   -I"$EMULATOR_ROOT/native" \
   -I"$REPO_ROOT/firmware/src" \
-  -I"$EMULATOR_ROOT/firmware" \
   -O2 \
   -std=c++17 \
   -s WASM=1 \

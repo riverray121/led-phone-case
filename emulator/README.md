@@ -9,8 +9,9 @@ speed (0.25–8×) are UI-only multipliers.
 
 ## Animations
 
-Six upstream scenes (Face, Fisherman, Runner, Sisyphus, Balloon, Stargazer) plus
-local extras: Campfire, Owl, Juggler.
+The nine scene animations from `firmware/src/animations.cpp`, via
+`sceneAnimationList()`: Face, Fisherman, Runner, Sisyphus, Balloon, Stargazer,
+Campfire, Owl, Juggler. The low-res 8×8 set is firmware-only.
 
 ## Prerequisites
 
@@ -34,8 +35,7 @@ Open http://localhost:8080
 
 ```
 emulator/
-  firmware/     local extras + shared helpers (upstream anim in ../firmware/src)
-  native/       GFX shim + Emscripten glue
+  native/       GFX shim + Emscripten glue (animations come from ../firmware/src)
   scripts/      build-wasm.sh
   wasm/         build output (gitignored)
   js/           WASM loader, render loop, UI

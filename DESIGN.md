@@ -124,8 +124,9 @@ Device name `LED Case`. One service, UUID base `7A0Bxxxx-63B1-4A6F-8D3A-6E1C2A5B
 
 ### Repo layout
 
-- `firmware/` — PlatformIO project (ESP32-C3, Arduino framework), one environment per case: `case-a-tft` (default) and `case-b-matrix` (`pio run -e case-b-matrix -t upload`). `src/case_display.h` is the driver interface with one implementation file per display; `src/animations.*` the engine; `src/ble_service.*` the GATT server. The matrix driver renders the same 128×128 canvas and averages 16×16 blocks per LED. `tools/wiring_test.py` is a MicroPython bring-up check for freshly soldered Case A boards.
+- `firmware/` — PlatformIO project (ESP32-C3, Arduino framework), one environment per case: `case-a-tft` (default) and `case-b-matrix` (`pio run -e case-b-matrix -t upload`). `src/case_display.h` is the driver interface with one implementation file per display; `src/animations.*` the engine, with helpers shared with the emulator in `src/animation_shared.*`; `src/ble_service.*` the GATT server. The matrix driver renders the same 128×128 canvas and averages 16×16 blocks per LED. `tools/wiring_test.py` is a MicroPython bring-up check for freshly soldered Case A boards.
 - `app/LEDCase.swiftpm` — iOS companion app (Swift Playgrounds app package). Open in Xcode, run on an iPhone.
+- `emulator/` — browser preview of the scene animations, compiled from `firmware/src` to WebAssembly. See `emulator/README.md`.
 
 ## Display paths long-term
 

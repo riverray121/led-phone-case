@@ -11,3 +11,7 @@ struct Animation {
 };
 
 Animation **animationList(int &count);
+
+// The 128x128 scene animations only: a prefix of animationList, excluding the
+// low-res set. The browser emulator renders these.
+Animation **sceneAnimationList(int &count);
